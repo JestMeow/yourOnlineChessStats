@@ -4,7 +4,4 @@ collection
 flask
 
 chess
-
-csv
-
 re
