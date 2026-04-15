@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess stats for {{ data['player']['username'] }}</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="player_information">
+        <img src="{{ data['player']['avatar'] }}" class="player_img">
+        <div id="player_info_table">
+        </div>
+    </div>
+
+    <h1>Statistics</h1>
+    <label for="time_class">Choose time class:</label>
+
+    <select name="time_classes" id="time_classes">
+        <option value="rapid">Rapid</option>
+        <option value="blitz">Blitz</option>
+        <option value="bullet">Bullet</option>
+        <option value="daily">Daily</option>
+    </select>
+    <h2>Records</h2>
+
+    <div id="record_chart" style="width: 96%; height: 200px;">
+
+    </div>
+
+    <table id="records_table">
+    </table>
+
+
+    
+
+    <h2>Rating</h2>
+    <div id="rating_chart" style="width: 96%; height: 600px;">
+
+    </div>
+
+    <h2>Openings</h2>
+
+    <label for="opening_sort">Sort by:</label>
+
+    <select name="opening_sort_by" id="opening_sort_by">
+        <option value="most_played">Most Played</option>
+        <option value="highest_winrate">Highest Winrate</option>
+        <option value="lowest_winrate">Lowest Winrate</option>
+    </select>
+
+    <label for="opening_filter">Color:</label>
+
+    <select name="opening_filter_color" id="opening_filter_color">
+        <option value="all">All</option>
+        <option value="white">White</option>
+        <option value="black">Black</option>
+    </select>
+
+    <table id="openings_list">
+    </table>
+    <!-- Chess stats for {{ data['player']['username'] }} -->
+
+    
+    
+
+    
+
+    <script>
+        var data = {{ data| tojson | safe }} || [];
+
+        // console.log(data['player']['username']);
+
+        function player_information() {
+            let player_info_table = document.getElementById('player_info_table');
+
+            for (let row in data.player) {
+                let inn = document.createElement('tr');
+                
+                const value = data.player[row];
+
+                if (value.toString().startsWith('https://')) {
+                    inn.innerHTML = `<th>${row}</th><th><a href="${value}">${value}</a></th>`;
+                } else {
+                    inn.innerHTML = `<th>${row}</th><th>${value}</th>`;
+                }
+
+                player_info_table.appendChild(inn);
+            }
+        }
+
+        //Records
+
+        function create_records_charts(time_class = 'rapid') {
+            const record_chart = echarts.init(document.getElementById('record_chart'));
+
+            const record = data.stats[`chess_${time_class}`].record;
+
+            const record_total = record.win + record.draw + record.loss;
+
+            const record_percentage = {
+                win: (record.win * 100 / record_total).toFixed(3),
+                draw: (record.draw * 100 / record_total).toFixed(3),
+                loss: (record.loss * 100 / record_total).toFixed(3)
+            }
+
+            const option = {
+                title: {
+                    text: 'Win/Draw/Loss',
+                    left: 'center',
+                    top: 'top',
+                    textStyle: {
+                        fontSize: 18
+                    }
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: "{a} <br/>{b} : {c}%"
+                },
+                xAxis: {
+                    show: false
+                },
+                yAxis: {
+                    show: false,
+                    data: ['Percentage']
+                },
+                series: [
+                    {
+                        name: `Win (${record.win})`,
+                        data: [record_percentage.win],
+                        type: 'bar',
+                        stack: 'wdl',
+                        itemStyle: {
+                            color: '#81b64c'
+                        }
+                    },
+                    {
+                        name: `Draw (${record.draw})`,
+                        data: [record_percentage.draw],
+                        type: 'bar',
+                        stack: 'wdl',
+                        itemStyle: {
+                            color: '#b8b8b8'
+                        }
+                    },
+                    {
+                        name: `Loss (${record.loss})`,
+                        data: [record_percentage.loss],
+                        type: 'bar',
+                        stack: 'wdl',
+                        itemStyle: {
+                            color: '#e02828'
+                        }
+                    }
+                ]
+            };
+
+            record_chart.setOption(option);
+        }
+
+        function create_records_table(time_class = 'rapid') {
+            const records_table = document.getElementById('records_table');
+            records_table.innerHTML = '';
+
+            const records_data = data.stats[`chess_${time_class}`];
+
+            const records_data_all = {
+                'Rating': records_data.last.rating,
+                'Peak Rating': records_data.best.rating,
+                'Rating Deviation': records_data.last.rd
+            }
+
+            for (let key in records_data_all) {
+                let inn = document.createElement('tr');
+                inn.innerHTML = `<th>${key}</th><th>${records_data_all[key]}</th>`;
+
+                records_table.appendChild(inn);
+            }
+        }
+
+
+
+        //Rating
+
+
+        function create_rating_charts(time_class = 'rapid') {
+            const rating_chart = echarts.init(document.getElementById('rating_chart'));
+
+            const history = data.rating_history[time_class];
+
+            const timestamps = history.map(item => item.timestamp);
+            const ratings = history.map(item => item.rating);
+
+
+            const option = {
+                title: {
+                    text: 'Rating against time',
+                    left: 'center',
+                    top: 'top',
+                    textStyle: {
+                        fontSize: 18
+                    }
+                },
+                tooltip: {
+                    trigger: "axis"
+                },
+                xAxis: {
+                    name: 'Time',
+                    type: 'time'
+                },
+                yAxis: {
+                    name: 'Rating',
+                    type: 'value'
+                },
+                series: [
+                    {
+                        data: history.map(d => [d.timestamp, d.rating]),
+                        type: 'line',
+                        step: 'end',
+                        symbol: 'none',
+                        large: true
+                    }
+                ]
+            };
+
+            rating_chart.setOption(option);
+        }
+
+        //Opening Stats
+
+        function sort_openings() {
+
+        }
+
+        function create_openings_chart(time_class = 'rapid', opening_sort_value = 'most_played', color_sort_value = 'all') {
+            const openings_list = document.getElementById('openings_list');
+
+            openings_list.innerHTML = '';
+
+            const header = document.createElement('tr');
+
+            header.innerHTML = `
+                <tr>
+                    <th>No</th>
+                    <th>Name</th>
+                    <th>Color</th>
+                    <th>Number of Games</th>
+                    <th>Win/Draw/Loss</th>
+                </tr>
+            `;
+
+            openings_list.appendChild(header);
+
+
+
+            const openings = data.openings[time_class];
+
+            const opening_name = openings.map(item => item.opening_name);
+            const result = {
+                win: openings.map(item => item.win),
+                draw: openings.map(item => item.draw),
+                loss: openings.map(item => item.loss),
+            };
+
+            const color = openings.map(item => item.color);
+
+
+
+            let openingsArray = [];
+
+            for (let i in openings) {
+                const total_games = result.win[i] + result.draw[i] + result.loss[i];
+
+                openingsArray.push({
+                    id: i,
+                    name: opening_name[i],
+                    color: color[i],
+                    win: result.win[i],
+                    draw: result.draw[i],
+                    loss: result.loss[i],
+                    total: total_games
+                });
+            }
+
+
+            //filter
+            if (color_sort_value !== 'all') {
+                const filtered = openingsArray.filter(o => o.color === color_sort_value);
+                openingsArray = filtered;
+            }
+            
+            //sort
+            if (opening_sort_value == 'most_played') {
+                openingsArray.sort((a, b) => b.total - a.total);
+            } else if (opening_sort_value == 'highest_winrate') {
+                openingsArray.sort((a, b) => (b.win / b.total) - (a.win / a.total));
+            }
+
+
+            for (const opening of openingsArray) {
+                const i = opening.id;
+
+                const inn = document.createElement('tr');
+                inn.innerHTML = `
+                    <th>${i}</th>
+                    <th>${opening.name}</th>
+                    <th>${opening.color}</th>
+                    <th>${opening.total}</th>
+                    <th><div style="width: 400px; height: 1em" id="opening_wdl_${i}"></div></th>
+                `;
+
+                openings_list.appendChild(inn);
+
+                const wdl_percentage = {
+                    win: (opening.win * 100 / opening.total).toFixed(3),
+                    draw: (opening.draw * 100 / opening.total).toFixed(3),
+                    loss: (opening.loss * 100 / opening.total).toFixed(3)
+                };
+
+                const opening_wdl = echarts.init(document.getElementById(`opening_wdl_${i}`));
+
+                const option = {
+                    grid: { left: 0, right: 0, top: 0, bottom: 0, containLabel: false },
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: "{a} <br/>{b} : {c}%"
+                    },
+                    xAxis: { show: false },
+                    yAxis: { show: false, data: ['Percentage'] },
+                    series: [
+                        {
+                            name: `Win (${opening.win})`,
+                            data: [wdl_percentage.win],
+                            type: 'bar',
+                            stack: 'wdl',
+                            itemStyle: { color: '#81b64c' }
+                        },
+                        {
+                            name: `Draw (${opening.draw})`,
+                            data: [wdl_percentage.draw],
+                            type: 'bar',
+                            stack: 'wdl',
+                            itemStyle: { color: '#b8b8b8' }
+                        },
+                        {
+                            name: `Loss (${opening.loss})`,
+                            data: [wdl_percentage.loss],
+                            type: 'bar',
+                            stack: 'wdl',
+                            itemStyle: { color: '#e02828' }
+                        }
+                    ]
+                };
+
+                opening_wdl.setOption(option);
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+        const time_class_dropdown = document.getElementById('time_classes');
+        const opening_sort_dropdown = document.getElementById('opening_sort_by');
+        const opening_filter_dropdown = document.getElementById('opening_filter_color');
+
+        
+
+        function time_class_on_change() {
+            const opening_sort_value = opening_sort_dropdown.value;
+            const time_class_value = time_class_dropdown.value;
+            const opening_filter_value = opening_filter_dropdown.value;
+
+            create_records_charts(time_class_value);
+            create_records_table(time_class_value);
+            create_rating_charts(time_class_value);
+            create_openings_chart(time_class_value, opening_sort_value, opening_filter_value);
+        }
+
+        time_class_dropdown.onchange = time_class_on_change;
+        time_class_on_change();
+
+        
+
+        function sort_on_change() {
+            const opening_sort_value = opening_sort_dropdown.value;
+            const time_class_value = time_class_dropdown.value;
+            const opening_filter_value = opening_filter_dropdown.value;
+
+            create_openings_chart(time_class_value, opening_sort_value, opening_filter_value);
+        }
+
+        opening_sort_dropdown.onchange = sort_on_change;
+        opening_filter_dropdown.onchange = sort_on_change;
+        sort_on_change();
+
+
+
+
+
+        player_information();
+
+        create_records_charts();
+
+        create_rating_charts();
+
+        create_openings_chart();
+
+        console.log(data);
+    </script>
+</body>
+</html>

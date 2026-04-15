@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Online Chess Stats</title>
+</head>
+<body>
+    <div id="main">
+        <form method="POST">
+            <label for="fname">Enter chess.com username:</label>
+            <input type="text" name="username" placeholder="username">
+            <button type="submit" onclick="clicked()">Go</button>
+        </form>
+    </div>
+    <script>
+        function clicked() {
+            const main = document.getElementById('main');
+
+            const inn = document.createElement('div');
+            inn.innerText = 'Loading... This may take a while...';
+
+            main.appendChild(inn);
+        }
+    </script>
+</body>
+</html>
