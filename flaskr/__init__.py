@@ -1,7 +1,7 @@
 from flask import Flask, render_template, jsonify, request, redirect, url_for
 
-import api_calls
-import get_openings
+from . import api_calls
+from . import get_openings
 
 app = Flask(__name__)
 
