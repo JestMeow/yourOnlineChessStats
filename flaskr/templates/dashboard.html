@@ -312,11 +312,23 @@
 
                 openings_list.appendChild(inn);
 
+
                 const wdl_percentage = {
                     win: (opening.win * 100 / opening.total).toFixed(3),
                     draw: (opening.draw * 100 / opening.total).toFixed(3),
                     loss: (opening.loss * 100 / opening.total).toFixed(3)
                 };
+
+                const total_wdl_percentage = Number(wdl_percentage.win) + Number(wdl_percentage.draw) + Number(wdl_percentage.loss);
+
+                console.log(`${opening.name} => ${total_wdl_percentage}`);
+
+                if (Number(total_wdl_percentage) > 100) {
+                    // Neglectable change. Prevents weirdly plotted data.
+                    console.log(`${wdl_percentage.draw} - 0.001`);
+                    wdl_percentage.draw -= 0.001;
+                    console.log(`=> ${wdl_percentage.draw}`);
+                }
 
                 const opening_wdl = echarts.init(document.getElementById(`opening_wdl_${i}`));
 
@@ -326,8 +338,13 @@
                         trigger: 'item',
                         formatter: "{a} <br/>{b} : {c}%"
                     },
-                    xAxis: { show: false },
-                    yAxis: { show: false, data: ['Percentage'] },
+                    xAxis: {
+                        show: false
+                    },
+                    yAxis: {
+                        show: false,
+                        data: ['Percentage']
+                    },
                     series: [
                         {
                             name: `Win (${opening.win})`,

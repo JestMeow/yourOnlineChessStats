@@ -12,15 +12,20 @@
             <input type="text" name="username" placeholder="username">
             <button type="submit" onclick="clicked()">Go</button>
         </form>
+        <div id="loading">
+
+        </div>
     </div>
     <script>
         function clicked() {
             const main = document.getElementById('main');
+            const loading = document.getElementById('loading');
 
             const inn = document.createElement('div');
             inn.innerText = 'Loading... This may take a while...';
 
-            main.appendChild(inn);
+            loading.innerHTML = '';
+            loading.appendChild(inn);
         }
     </script>
 </body>
